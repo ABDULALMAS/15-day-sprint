@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 days</title>
+<style>
+  :root {
+    --bg: rgb(16, 18, 24);
+    --surface: rgb(23, 26, 34);
+    --line: rgb(42, 46, 58);
+    --text: #e6e4dc;
+    --muted: #8b90a0;
+    --accent: #f0a43a;
+    --accent-ink: #1a1203;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 64px; align-items: start; }
+  h2 { font-size: 15px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
+  section { margin-top: 56px; }
+
+  /* top bar */
+  .top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .link {
+    background: none; border: 0; padding: 4px 0; font: inherit; font-size: 14px;
+    color: var(--muted); text-decoration: underline; cursor: pointer;
+  }
+  .link:hover { color: var(--text); }
+
+  /* goal + why */
+  .goal {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.2;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .why {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 19px;
+    line-height: 1.75;
+    max-width: 62ch;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  .empty { color: var(--muted); font-style: italic; }
+
+  /* countdown */
+  .count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .count {
+    font-size: clamp(30px, 5vw, 44px); font-weight: 600; line-height: 1.1;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  }
+  .count small { font-size: .45em; font-weight: 500; color: var(--muted); margin: 0 .5em 0 .15em; }
+  .count-meta { color: var(--muted); font-size: 15px; }
+  .bar { height: 4px; background: var(--line); border-radius: 2px; margin: 14px 0 28px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+  /* calendar */
+  .cal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .cal-head h2 { margin: 0; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .dow { font-size: 13px; color: var(--muted); text-align: center; padding-bottom: 4px; }
+  .cell {
+    position: relative; min-height: 96px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .cell .lbl { font-size: 13px; color: var(--muted); line-height: 1.2; }
+  .cell .n { font-size: 32px; font-weight: 600; line-height: 1.1; }
+  .cell .foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 6px; }
+  .cell .d { font-size: 12px; color: var(--muted); }
+  .cell input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+  .cell.blank { border: 0; background: none; }
+  .cell.future { opacity: .45; }
+  .cell.missed { border-style: dashed; background: none; }
+  .cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .cell.done { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .cell.done .d, .cell.done .lbl { color: rgba(26, 18, 3, .7); }
+  .cell.today label, .cell.today input { cursor: pointer; }
+  .cell label { display: contents; }
+  .hint { color: var(--muted); font-size: 14px; margin: 14px 0 0; }
+
+  /* rules */
+  aside { position: sticky; top: 40px; border-left: 1px solid var(--line); padding-left: 32px; margin-top: 52px; }
+  aside h2 { margin-bottom: 16px; }
+  .rules { list-style: none; margin: 0; padding: 0; }
+  .rules li { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 16px; line-height: 1.5; }
+  .rules li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 9px; border-radius: 50%; background: var(--accent); }
+  .rules li:last-child { border-bottom: 0; }
+
+  /* edit dialog */
+  dialog {
+    width: min(580px, 92vw); max-height: 90vh; overflow: auto;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--line); border-radius: 14px; padding: 28px;
+  }
+  dialog::backdrop { background: rgba(8, 9, 12, .7); }
+  dialog h3 { margin: 0 0 20px; font-size: 22px; }
+  dialog label.f { display: block; font-size: 14px; color: var(--muted); margin: 18px 0 6px; }
+  dialog textarea, dialog input[type="text"] {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    font: inherit; font-size: 16px;
+  }
+  dialog textarea { resize: vertical; }
+  dialog .rule-in { margin-bottom: 8px; }
+  .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+  .btn {
+    font: inherit; font-size: 15px; padding: 9px 20px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--line); background: none; color: var(--text);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    aside { position: static; border-left: 0; border-top: 1px solid var(--line); padding: 32px 0 0; margin-top: 56px; }
+    .cell { min-height: 64px; padding: 6px 7px; }
+    .cell .d, .cell .lbl { display: none; }
+    .cell .foot { justify-content: flex-end; }
+    .cell .n { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top"><button type="button" class="link" id="editBtn">Edit goal, why and rules</button></div>
+
+  <div class="layout">
+    <main>
+      <h1 class="goal" id="goal"></h1>
+
+      <section>
+        <h2>Why this matters</h2>
+        <p class="why" id="why"></p>
+      </section>
+
+      <section>
+        <h2>Time left</h2>
+        <div class="count-row">
+          <div class="count" id="count" aria-live="off"></div>
+          <div class="count-meta" id="countMeta"></div>
+        </div>
+        <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+
+        <div class="cal-head">
+          <h2 id="monthLabel">The 18 days</h2>
+        </div>
+        <div class="cal" id="cal"></div>
+        <p class="hint">Check today's box when the day's work is done. Past days are locked.</p>
+      </section>
+    </main>
+
+    <aside>
+      <h2>My rules</h2>
+      <ol class="rules" id="rules"></ol>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <h3>Edit</h3>
+  <label class="f" for="fGoal">Main goal</label>
+  <textarea id="fGoal" rows="3"></textarea>
+  <label class="f" for="fWhy">Why it matters</label>
+  <textarea id="fWhy" rows="5"></textarea>
+  <label class="f">Rules (up to 10)</label>
+  <div id="fRules"></div>
+  <div class="actions">
+    <button type="button" class="btn" id="cancel">Cancel</button>
+    <button type="button" class="btn primary" id="save">Save</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var TOTAL = 18, DAY = 864e5, KEY = 'fifteen-day-focus-v2';
+  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function fresh() {
+    return {
+      goal: 'Build a production-grade autonomous AI agent that discovers potential customers, researches them using web context, and sends personalized outreach.',
+      why: '',
+      rules: ['', '', '', '', '', '', '', '', '', ''],
+      start: Date.now(),
+      done: {}
+    };
+  }
+
+  var S;
+  try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+  if (!S || typeof S.start !== 'number') S = fresh();
+  if (!S.rules || S.rules.length !== 10) S.rules = fresh().rules;
+  if (!S.done) S.done = {};
+  save();
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  var END = S.start + TOTAL * DAY;
+  function dayNum() { return Math.floor((Date.now() - S.start) / DAY) + 1; }
+
+  /* ---------- static content ---------- */
+  function renderText() {
+    $('goal').textContent = S.goal || 'Add your goal with Edit.';
+    var why = $('why');
+    if (S.why.trim()) { why.textContent = S.why; why.className = 'why'; }
+    else { why.textContent = 'Add your reasons with Edit.'; why.className = 'why empty'; }
+
+    var ol = $('rules'); ol.innerHTML = '';
+    var any = false;
+    S.rules.forEach(function (r) {
+      if (!r.trim()) return;
+      any = true;
+      var li = document.createElement('li');
+      li.textContent = r.trim();
+      ol.appendChild(li);
+    });
+    if (!any) {
+      var li = document.createElement('li');
+      li.textContent = 'Add your rules with Edit.';
+      li.className = 'empty';
+      ol.appendChild(li);
+    }
+  }
+
+  /* ---------- calendar ---------- */
+  var lastDay = null;
+  function renderCal() {
+    var cur = dayNum();
+    lastDay = cur;
+    var cal = $('cal'); cal.innerHTML = '';
+    DOW.forEach(function (d) {
+      var h = document.createElement('div'); h.className = 'dow'; h.textContent = d; cal.appendChild(h);
+    });
+    var first = new Date(S.start).getDay();
+    var i;
+    for (i = 0; i < first; i++) {
+      var b = document.createElement('div'); b.className = 'cell blank'; cal.appendChild(b);
+    }
+    var doneCount = 0;
+    for (i = 1; i <= TOTAL; i++) (function (n) {
+      var dt = new Date(S.start + (n - 1) * DAY);
+      var isDone = !!S.done[n];
+      if (isDone) doneCount++;
+      var cls = 'cell';
+      if (isDone) cls += ' done';
+      else if (cur > n) cls += ' missed';
+      if (cur < n) cls += ' future';
+      if (cur === n) cls += ' today';
+
+      var cell = document.createElement('div'); cell.className = cls;
+      var top = document.createElement('div');
+      var lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'Day';
+      var num = document.createElement('div'); num.className = 'n'; num.textContent = n;
+      top.appendChild(lbl); top.appendChild(num);
+      var dEl = document.createElement('div'); dEl.className = 'd';
+      dEl.textContent = MON[dt.getMonth()] + ' ' + dt.getDate();
+
+      var label = document.createElement('label');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = isDone;
+      cb.disabled = cur !== n;
+      cb.setAttribute('aria-label', 'Day ' + n + (cur === n ? ', today' : ''));
+      cb.addEventListener('change', function () {
+        S.done[n] = cb.checked;
+        if (!cb.checked) delete S.done[n];
+        save(); renderCal(); tick();
+      });
+      label.appendChild(cb);
+      var foot = document.createElement('div'); foot.className = 'foot';
+      foot.appendChild(dEl); foot.appendChild(label);
+      cell.appendChild(top); cell.appendChild(foot);
+      cal.appendChild(cell);
+    })(i);
+
+    var s = new Date(S.start), e = new Date(S.start + (TOTAL - 1) * DAY);
+    $('monthLabel').textContent = (s.getMonth() === e.getMonth())
+      ? MON[s.getMonth()] + ' ' + s.getFullYear()
+      : MON[s.getMonth()] + ' to ' + MON[e.getMonth()] + ' ' + e.getFullYear();
+
+    $('barFill').style.width = (doneCount / TOTAL * 100) + '%';
+    var meta;
+    if (cur < TOTAL + 1) meta = 'Day ' + Math.max(cur, 1) + ' of ' + TOTAL + ', ' + doneCount + ' done';
+    else meta = doneCount + ' of ' + TOTAL + ' days done';
+    $('countMeta').textContent = meta;
+  }
+
+  /* ---------- countdown ---------- */
+  function tick() {
+    var ms = END - Date.now();
+    var el = $('count');
+    if (ms <= 0) { el.textContent = 'Time is up'; }
+    else {
+      var s = Math.floor(ms / 1000);
+      var d = Math.floor(s / 86400); s -= d * 86400;
+      var h = Math.floor(s / 3600); s -= h * 3600;
+      var m = Math.floor(s / 60); s -= m * 60;
+      el.innerHTML = d + '<small>d</small>' + pad(h) + '<small>h</small>' + pad(m) + '<small>m</small>' + pad(s) + '<small>s</small>';
+    }
+    if (dayNum() !== lastDay) renderCal();
+  }
+
+  /* ---------- edit dialog ---------- */
+  var dlg = $('dlg'), fRules = $('fRules'), ruleInputs = [];
+  for (var i = 0; i < 10; i++) {
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'rule-in';
+    inp.setAttribute('aria-label', 'Rule ' + (i + 1));
+    inp.placeholder = 'Rule ' + (i + 1);
+    fRules.appendChild(inp); ruleInputs.push(inp);
+  }
+  $('editBtn').addEventListener('click', function () {
+    $('fGoal').value = S.goal; $('fWhy').value = S.why;
+    ruleInputs.forEach(function (inp, i) { inp.value = S.rules[i] || ''; });
+    dlg.showModal();
+  });
+  $('cancel').addEventListener('click', function () { dlg.close(); });
+  $('save').addEventListener('click', function () {
+    S.goal = $('fGoal').value.trim();
+    S.why = $('fWhy').value;
+    S.rules = ruleInputs.map(function (inp) { return inp.value; });
+    save(); renderText(); dlg.close();
+  });
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+
+  renderText();
+  renderCal();
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
